@@ -1,83 +1,89 @@
-local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "Merara hub",
+   Icon = 0,
    LoadingTitle = "カ。慣性の法則について。",
-   LoadingSubtitle = "by Merara!!",
+   LoadingSubtitle = "By Merara",
+   Theme = "Amethyst",
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false,
    ConfigurationSaving = {
-      Enabled = false
+      Enabled = true,
+      FolderName = nil,
+      FileName = "AntiInertia"
+   },
+   Discord = {
+      Enabled = false,
+      Invite = "noinvitelink",
+      RememberJoins = true
+   },
+   KeySystem = false,
+   KeySettings = {
+      Title = "Key System",
+      Subtitle = "Key System",
+      Note = "No key needed",
+      FileName = "Key",
+      SaveKey = false,
+      GrabKeyFromSite = false,
+      Key = {""}
    }
 })
 
-local Tab = Window:CreateTab("Movement")
-local Section = Tab:CreateSection("Inertia Control")
+local MainTab = Window:CreateTab("Anti Inertia", 4483362458)
+local MainSection = MainTab:CreateSection("Inertia Control")
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+getgenv().AntiInertia = false
+getgenv().InertiaStrength = 1
 
-local player = Players.LocalPlayer
-
-local function WaitForChar()
-	local char = player.Character or player.CharacterAdded:Wait()
-	local root = char:WaitForChild("HumanoidRootPart")
-	local humanoid = char:WaitForChild("Humanoid")
-	return char, root, humanoid
-end
-
-local char, root, humanoid = WaitForChar()
-
-local BRAKE_POWER = 8
-local BrakeConnection = nil
-local Enabled = false
-
-local function EnableBrake()
-	if BrakeConnection then return end
-	
-	BrakeConnection = RunService.RenderStepped:Connect(function(dt)
-		local vel = root.AssemblyLinearVelocity
-		local moving = humanoid.MoveDirection.Magnitude > 0
-		if not moving then
-			root.AssemblyLinearVelocity = vel * math.clamp(1 - (BRAKE_POWER * dt), 0, 1)
-		end
-	end)
-end
-
-local function DisableBrake()
-	if BrakeConnection then
-		BrakeConnection:Disconnect()
-		BrakeConnection = nil
-	end
-end
-
-local Toggle = Tab:CreateToggle({
-   Name = "慣性を無効化（ONでピタッと止まる）",
+local AntiInertiaToggle = MainTab:CreateToggle({
+   Name = "Anti Inertia",
    CurrentValue = false,
-   Flag = "InertiaToggle",
+   Flag = "AntiInertia",
    Callback = function(Value)
-        Enabled = Value
-        if Enabled then
-            EnableBrake()
-        else
-            DisableBrake()
-        end
+      getgenv().AntiInertia = Value
+      
+      local Player = game.Players.LocalPlayer
+      local Character = Player.Character or Player.CharacterAdded:Wait()
+      local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+      
+      if Value then
+         getgenv().InertiaConnection = game:GetService("RunService").Heartbeat:Connect(function()
+            if getgenv().AntiInertia and Character and HumanoidRootPart then
+               local velocity = HumanoidRootPart.Velocity
+               local strength = getgenv().InertiaStrength / 15
+               local newVelocity = Vector3.new(
+                  velocity.X * (1 - strength),
+                  velocity.Y,
+                  velocity.Z * (1 - strength)
+               )
+               HumanoidRootPart.Velocity = newVelocity
+            end
+         end)
+      else
+         if getgenv().InertiaConnection then
+            getgenv().InertiaConnection:Disconnect()
+         end
+      end
    end,
 })
 
-local Slider = Tab:CreateSlider({
-    Name = "ブレーキ強度",
-    Range = {1, 20},
-    Increment = 1,
-    Suffix = " Power",
-    CurrentValue = BRAKE_POWER,
-    Flag = "BrakeSlider",
-    Callback = function(Value)
-        BRAKE_POWER = Value
-    end,
+local InertiaStrengthSlider = MainTab:CreateSlider({
+   Name = "Inertia Strength",
+   Range = {1, 15},
+   Increment = 1,
+   Suffix = "",
+   CurrentValue = 1,
+   Flag = "InertiaStrength",
+   Callback = function(Value)
+      getgenv().InertiaStrength = Value
+   end,
 })
 
-player.CharacterAdded:Connect(function()
-	char, root, humanoid = WaitForChar()
-	if Enabled then
-		EnableBrake()
-	end
-end)
+local InfoSection = MainTab:CreateSection("Information")
+
+local InfoLabel = MainTab:CreateLabel("Strength 1 = Minimum effect")
+local InfoLabel2 = MainTab:CreateLabel("Strength 15 = Maximum effect")
+local InfoLabel3 = MainTab:CreateLabel("Adjust strength to control inertia")
+
+Rayfield:LoadConfiguration()
