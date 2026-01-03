@@ -1,10 +1,10 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Merara hub",
+   Name = "Anti Inertia",
    Icon = 0,
-   LoadingTitle = "カ。慣性の法則について。",
-   LoadingSubtitle = "By Merara",
+   LoadingTitle = "Anti Inertia",
+   LoadingSubtitle = "Loading...",
    Theme = "Amethyst",
    DisableRayfieldPrompts = false,
    DisableBuildWarnings = false,
@@ -46,34 +46,52 @@ local AntiInertiaToggle = MainTab:CreateToggle({
       local Player = game.Players.LocalPlayer
       local Character = Player.Character or Player.CharacterAdded:Wait()
       local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+      local Humanoid = Character:WaitForChild("Humanoid")
       
       if Value then
+         local BodyVelocity = Instance.new("BodyVelocity")
+         BodyVelocity.Name = "AntiInertiaVelocity"
+         BodyVelocity.MaxForce = Vector3.new(0, 0, 0)
+         BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+         BodyVelocity.Parent = HumanoidRootPart
+         
          getgenv().InertiaConnection = game:GetService("RunService").Heartbeat:Connect(function()
-            if getgenv().AntiInertia and Character and HumanoidRootPart then
-               local velocity = HumanoidRootPart.Velocity
-               local strength = getgenv().InertiaStrength / 15
-               local newVelocity = Vector3.new(
-                  velocity.X * (1 - strength),
-                  velocity.Y,
-                  velocity.Z * (1 - strength)
-               )
-               HumanoidRootPart.Velocity = newVelocity
+            if getgenv().AntiInertia and Character and HumanoidRootPart and Humanoid then
+               local moveDirection = Humanoid.MoveDirection
+               local currentVelocity = HumanoidRootPart.Velocity
+               
+               if moveDirection.Magnitude > 0 then
+                  local desiredDirection = moveDirection * Humanoid.WalkSpeed
+                  local force = (getgenv().InertiaStrength / 15) * 100000
+                  
+                  BodyVelocity.MaxForce = Vector3.new(force, 0, force)
+                  BodyVelocity.Velocity = Vector3.new(desiredDirection.X, 0, desiredDirection.Z)
+               else
+                  BodyVelocity.MaxForce = Vector3.new(0, 0, 0)
+               end
             end
          end)
       else
          if getgenv().InertiaConnection then
             getgenv().InertiaConnection:Disconnect()
          end
+         
+         if HumanoidRootPart then
+            local BV = HumanoidRootPart:FindFirstChild("AntiInertiaVelocity")
+            if BV then
+               BV:Destroy()
+            end
+         end
       end
    end,
 })
 
 local InertiaStrengthSlider = MainTab:CreateSlider({
-   Name = "Inertia Strength",
+   Name = "Response Speed",
    Range = {1, 15},
    Increment = 1,
    Suffix = "",
-   CurrentValue = 1,
+   CurrentValue = 8,
    Flag = "InertiaStrength",
    Callback = function(Value)
       getgenv().InertiaStrength = Value
@@ -82,8 +100,8 @@ local InertiaStrengthSlider = MainTab:CreateSlider({
 
 local InfoSection = MainTab:CreateSection("Information")
 
-local InfoLabel = MainTab:CreateLabel("Strength 1 = Minimum effect")
-local InfoLabel2 = MainTab:CreateLabel("Strength 15 = Maximum effect")
-local InfoLabel3 = MainTab:CreateLabel("Adjust strength to control inertia")
+local InfoLabel = MainTab:CreateLabel("Response Speed 1 = Smooth turning")
+local InfoLabel2 = MainTab:CreateLabel("Response Speed 15 = Instant turning")
+local InfoLabel3 = MainTab:CreateLabel("Higher value = More responsive")
 
 Rayfield:LoadConfiguration()
